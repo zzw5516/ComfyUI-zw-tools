@@ -1,0 +1,84 @@
+<!DOCTYPE html>  
+<html lang="en">  
+<head>  
+    <meta charset="UTF-8">  
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">  
+    <title>Drag and Drop LI Elements</title>  
+    <style>  
+        ul {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            width: 300px;
+            box-sizing: border-box;
+        }
+
+        li {
+            list-style-type: none;
+            background-color: lightcoral;
+            width: 100px;
+            padding: 5px;
+            margin-top: 10px;
+            border-radius: 3px;
+            color: #fff;
+            text-align: center;
+            box-sizing: border-box;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .dragging {
+            opacity: .5;
+            border: 5px dashed #999;
+        } 
+    </style>  
+    <script src="js/jquery.min.js"></script>
+</head>  
+<body>  
+    <ul class="test">
+        <li data-i="1" draggable="true"><a href="dsads">111111</a></li>
+        <li data-i="2" draggable="true"><a href="dsads">222222</a></li>
+        <li data-i="3" draggable="true"><a href="dsads">333333</a></li>
+        <li data-i="4" draggable="true"><a href="dsads">444444</a></li>
+        <li data-i="5" draggable="true"><a href="dsads">555555</a></li>
+        <li data-i="6" draggable="true"><a href="dsads">666666</a></li>
+    </ul> 
+  
+    <script>  
+       
+       const DURATION = '.6s';
+
+        init();
+
+
+        function init() {
+            bindDragEvent();
+        }
+
+        function bindDragEvent() {
+            let draggingItem;
+            let dragEndItem;
+            $('li').on('dragstart', function (e) {
+                draggingItem = $(this);
+                console.log("dragstart=",draggingItem.html());
+                draggingItem.addClass('dragging');
+                e.originalEvent.dataTransfer.setData('text/plain', '');
+            });
+
+            $('li').on('dragend', function (e) {
+                draggingItem.removeClass('dragging');
+                console.log("dragend=",$(e.target).html());
+                if(dragEndItem.parent().hasClass('test')){
+                    dragEndItem.before(draggingItem);
+                }
+            });
+            $('li').on('dragover', function (e) {
+                e.preventDefault();
+                console.log("dragover=",$(e.target).parent().parent().html());
+                dragEndItem = $(e.target).parent();
+            });
+        }
+
+    </script>  
+</body>  
+</html>

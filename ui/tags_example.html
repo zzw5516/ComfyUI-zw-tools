@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Bootstrap 101 Template</title>
+        <link href="css/zw.css" rel="stylesheet">
+        <script src="js/jquery.min.js"></script>
+           
+    </head>
+    <body>
+        <div class="zw-tags-box" style="display: block;">
+            <div class="zw-close-box"><span>zw-tools提示词维护</span><button type="button" class="zw-btn zw-btn-close" title="关闭">×</button></div>
+            <div class="zw-conent ">
+                <div class="zw-col-box">
+                    <div class="zw-col0">
+                        <div class="zw-col-btn-bar">
+                            <button type="button" class="zw-btn">新增</button>
+                            <button type="button" class="zw-btn">修改</button>
+                            <button type="button" class="zw-btn">删除</button>
+                        </div>
+                        <div class="zw-col-title">
+                            <a class="head">大分类</a>
+                        </div>
+                        <ul class="zw-ul-list0">
+                            <li class="zw-li-list0"><a>整体环境</a></li>
+                            <li class="zw-li-list0"><a href="" class="zw-tag-on">整体环境</a></li>
+                            <li class="zw-li-list0"><a href="">整体环境</a></li>
+                            <li class="zw-li-list0"><a href="">整体环境</a></li>
+                        </ul>
+                    </div>
+                    <div class="zw-col1">
+                        <div class="zw-col-btn-bar">
+                            <button type="button" class="zw-btn">新增</button>
+                            <button type="button" class="zw-btn">修改</button>
+                            <button type="button" class="zw-btn">删除</button>
+                        </div>
+                        <div class="zw-col-title">
+                            <a class="head">子分类</a>
+                        </div>
+                        <ul class="zw-ul-list0">
+                            <li class="zw-li-list0"><a href="">整体环境</a></li>
+                            <li class="zw-li-list0"><a href="" class="zw-tag-on">整体环境</a></li>
+                            <li class="zw-li-list0"><a href="">整体环境</a></li>
+                        </ul>
+                    </div>
+                    <div class="zw-col2">
+                        <div class="zw-col-btn-bar">
+                            <button type="button" class="zw-btn">新增</button>
+                            <button type="button" class="zw-btn">修改</button>
+                            <button type="button" class="zw-btn">删除</button>
+                            <label style="color:#AAA;font-size: 13px;cursor: pointer;"><input type="checkbox" class="chkbox is_fav">收藏</label>
+                        </div>
+                        <div class="zw-col-title">
+                            <a class="head"><span class="zw-sp0">排序号</span><span class="zw-sp1">中文词</span><span class="zw-sp2">英文词/值</span><span class="zw-sp3">示例图</span></a>
+                        </div>
+                        <ul class="zw-ul-list0">
+                            <li class="zw-li-list0"><a class="zw-tag-on"><span class="zw-sp0">整体环境</span><span class="zw-sp1">整体环境</span><span class="zw-sp2">整体环境</span><span class="zw-sp3"><i class="zw-red-true" title="收藏">❤</i><img src=""></span></a></li>
+                            <li class="zw-li-list0"><a class="zw-tag-on"><span class="zw-sp0">整体环境</span><span class="zw-sp1">整体环境</span><span class="zw-sp2">整体环境</span><span class="zw-sp3"><i class="zw-red-true" title="收藏">❤</i><img src=""></span></a></li>
+                            <li class="zw-li-list0"><a class="zw-tag-on"><span class="zw-sp0">整体环境</span><span class="zw-sp1">整体环境</span><span class="zw-sp2">整体环境</span><span class="zw-sp3"><i class="zw-red-false" title="收藏">❤</i><img src=""></span></a></li>
+                            
+                            
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="zw-edit-box" >
+            <div class="zw-edit-title">添加/编辑大分类</div>
+            <ul class="zw-param-ul">
+                <li>
+                    <b>分类名称</b>
+                    <input type="text" class="zw-text" placeholder="" maxlength="18"> 
+                </li>
+                <li>
+                    <b>分类排序</b>
+                    <input type="text" class="zw-text" placeholder="仅数字" maxlength="3"> 
+                </li>
+            </ul>
+            <div class="zw-edit-bar">
+                <button type="button" class="zw-btn">保存</button>
+                <button type="button" class="zw-btn">取消</button>
+            </div>
+        </div>
+        <div class="zw-edit-box">
+            <div class="zw-edit-title">添加/编辑子分类</div>
+            <ul class="zw-param-ul">
+                <li>
+                    <b>分类名称</b>
+                    <input type="text" class="zw-text" placeholder="" maxlength="18"> 
+                </li>
+                <li>
+                    <b>分类排序</b>
+                    <input type="text" class="zw-text" placeholder="仅数字" maxlength="3"> 
+                </li>
+            </ul>
+            <div class="zw-edit-bar">
+                <button type="button" class="zw-btn">保存</button>
+                <button type="button" class="zw-btn">取消</button>
+            </div>
+        </div>
+        <div class="zw-edit-box" style="display: block;">
+            <div class="zw-edit-title">添加/编辑提示词</div>
+            <ul class="zw-param-ul">
+                <li>
+                    <b>中文词</b>
+                    <input type="text" class="zw-text" placeholder="" maxlength="18"> 
+                </li>
+                <li>
+                    <b>英文词/值</b>
+                    <input type="text" class="zw-text" placeholder=""> 
+                </li>
+                <li>
+                    <b>示例图</b>
+                    <input type="text" class="zw-text" placeholder="完整图片URL"> 
+                </li>
+                <li>
+                    <b>分类排序</b>
+                    <input type="text" class="zw-text" placeholder="仅数字" maxlength="3"> 
+                </li>
+                <li>
+                    <b>收藏</b>
+                    <label style="color:#AAA;font-size: 13px;cursor: pointer;"><input type="checkbox" class="chkbox is_fav"></label>
+                </li>
+            </ul>
+            <div class="zw-edit-bar">
+                <button type="button" class="zw-btn">保存</button>
+                <button type="button" class="zw-btn">取消</button>
+            </div>
+        </div>
+    </body>
+</html>

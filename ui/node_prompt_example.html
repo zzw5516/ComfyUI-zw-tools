@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Bootstrap 101 Template</title>
+        <link href="css/zw.css" rel="stylesheet">
+        <script src="js/jquery.min.js"></script>
+        <script type="text/javascript">
+            $(function(){
+
+                
+
+                initText()
+            });
+
+
+            function initText() {
+                let text = "(请输入文本1:1.2),请输入文本2,请输入文本3,文本4,";
+                //let text = $("#zw-textarea-0").text();
+                text = text.replace(/，/g, ",").replace(/。/g, ",").replace(/\r\n/g, ",").replace(/\n/g, ",");
+
+                let textArr = text.split(",");
+                console.log(textArr);
+                let textHtml = "";
+                let textStr = "";
+                for (let i = 0; i < textArr.length; i++) {
+                    if (textArr[i] != "") {
+                        textHtml += '<li draggable="true"><a href="javascript:;" class="zw-a-text">'+textArr[i]+'</a><a href="javascript:;" class="zw-a-remove">×</a></li>';
+                        textStr += textArr[i]+",";
+                    }
+                }
+                $("#zw-textarea-0").val(textStr);
+                $(".zw-text-ul").append(textHtml);
+
+                $(".zw-a-remove").click(function(){
+                    console.log("点击了.zw-a-remove");
+                    $(this).parent().remove();
+                    var text = $(this).parent().find(".zw-a-text").text();
+                    var textArea = $("#zw-textarea-0").val();
+                    textArea = textArea.replace(text+",","");
+                    $("#zw-textarea-0").val(textArea);
+                });
+                $(".zw-a-text").click(function(){
+                    console.log("点击了.zw-a-text");
+                    var text = $(this).text();
+                    var textArea = $("#zw-textarea-0").val();
+                    var sPos = textArea.lastIndexOf(text);
+                    var ePos = sPos + text.length;
+                    $("#zw-textarea-0").prop("selectionStart", sPos);
+                    $("#zw-textarea-0").prop("selectionEnd", ePos);
+                    $("#zw-textarea-0").focus();
+
+                });
+                $(".zw-a-text").mouseover(function () {
+                    let html =
+                    `
+                        <div class="zw-text-bar">
+                            <a href="javascript:;" class="zw-a-bar zw-q0-minlus">-</a>
+                            <input type="text" class="zw-text" value="1">
+                            <a href="javascript:;" class="zw-a-bar zw-q0-plus">+</a>
+                            <a href="javascript:;" class="zw-a-bar zw-q1-plus">
+                                ( )+
+                                <span class="zw-msg-tips">
+                                    <span class="zw-msg-tips-arrow">&#x25B2;</span>
+                                    <span class="zw-msg-tips-text">增强关键词权重：叠加( )</span>
+                                </span>
+                            </a>
+                            <a href="javascript:;" class="zw-a-bar zw-q1-minlus">
+                                ( )-
+                                <span class="zw-msg-tips">
+                                    <span class="zw-msg-tips-arrow">&#x25B2;</span>
+                                    <span class="zw-msg-tips-text">增强关键词权重：减少( )</span>
+                                </span>
+                            </a>
+                            <a href="javascript:;" class="zw-a-bar zw-q2-plus">
+                                [ ]+
+                                <span class="zw-msg-tips">
+                                    <span class="zw-msg-tips-arrow">&#x25B2;</span>
+                                    <span class="zw-msg-tips-text">减弱关键词权重：叠加[ ]</span>
+                                </span>
+                            </a>
+                            <a href="javascript:;" class="zw-a-bar  zw-q2-minlus">
+                                [ ]-
+                                <span class="zw-msg-tips">
+                                    <span class="zw-msg-tips-arrow">&#x25B2;</span>
+                                    <span class="zw-msg-tips-text">减弱关键词权重：减少[ ]</span>
+                                </span>
+                            </a>
+                        </div>
+                    `;
+                    if( $(this).parent().find('.zw-text-bar').length == 0 ) {
+                        $(this).before(html);
+                        bindBarEvent($(this));
+
+                        let text = $(this).text();
+                        text = text.replace(/\(/g, "").replace(/\)/g, "");
+                        text = text.replace(/\[/g, "").replace(/\]/g, "");
+                        let pos = text.indexOf(":");
+                        if(pos > -1) {
+                            let v = text.substring(pos+1);
+                            $(this).parent().find('.zw-text-bar').find('.zw-text').val(v);
+                        }
+
+                        var scrollableDiv = document.getElementById('zw-text-area');  
+                        scrollableDiv.addEventListener('scroll', function() {   
+                            scrollY = this.scrollTop;  
+                            //console.log('垂直滚动偏移量:', scrollY);  
+
+                            
+                        });  
+                    }
+                    //console.log("scrollY==="+scrollY);
+                    $(this).parent().find('.zw-text-bar').css("margin-top", (-36-scrollY)+"px");
+                    //console.log("margin-top==="+$(this).parent().find('.zw-text-bar').css("margin-top"));
+                    
+                });
+                
+            }
+
+            function bindBarEvent(e) {
+                e.parent().find(".zw-q0-minlus").click(function(){
+                    //console.log("点击了zw-q0-minlus");
+                    let v = $(this).parent().find(".zw-text").val();
+                    v = v === "" ? 1 : parseFloat(v);
+                    v =  (v * 1000 - 0.05 * 1000) / 1000;
+                    $(this).parent().find(".zw-text").val(v);
+
+                    let text = $(this).parent().parent().find(".zw-a-text").text();
+                    text = text.replace(/\(/g, "").replace(/\)/g, "");
+                    text = text.replace(/\[/g, "").replace(/\]/g, "");
+                    let pos = text.indexOf(":");
+                    if(pos > -1) {
+                        text = text.substring(0, pos);
+                    } 
+
+                    if(v != 1) {
+                        text = "("+text + ":" + v + ")";
+                    }
+                    $(this).parent().parent().find(".zw-a-text").text(text);
+
+                    setTextAreaVal();
+                });
+                e.parent().find(".zw-q0-plus").click(function(){
+                    //console.log("点击了zw-q0-plus");
+                    let v = $(this).parent().find(".zw-text").val();
+                    v = v === "" ? 1 : parseFloat(v);
+                    v =  (v * 1000 + 0.05 * 1000) / 1000;
+                    $(this).parent().find(".zw-text").val(v);
+
+                    let text = $(this).parent().parent().find(".zw-a-text").text();
+                    text = text.replace(/\(/g, "").replace(/\)/g, "");
+                    text = text.replace(/\[/g, "").replace(/\]/g, "");
+                    let pos = text.indexOf(":");
+                    if(pos > -1) {
+                        text = text.substring(0, pos);
+                    }
+                    if(v != 1) {
+                        text = "("+text + ":" + v + ")";
+                    }
+                    $(this).parent().parent().find(".zw-a-text").text(text);
+
+                    setTextAreaVal();
+                });
+
+                e.parent().find(".zw-q1-plus").click(function(){
+                    //console.log("点击了zw-q1-plus");
+                    let text = $(this).parent().parent().find(".zw-a-text").text();
+                    text = text.replace(/\[/g, "").replace(/\]/g, "");
+                    let pos = text.indexOf(":");
+                    if(pos > -1) {
+                        text = text.substring(0, pos);
+                        text = text.replace(/\(/g, "").replace(/\)/g, "");
+                    }
+                    text = "("+text +")";
+                    $(this).parent().parent().find(".zw-a-text").text(text);
+
+                    setTextAreaVal();
+                });
+                e.parent().find(".zw-q1-minlus").click(function(){
+                    //console.log("点击了zw-q1-minlus");
+                    let text = $(this).parent().parent().find(".zw-a-text").text();
+                    text = text.replace(/\[/g, "").replace(/\]/g, "");
+                    let pos = text.indexOf(":");
+                    if(pos > -1) {
+                        text = text.substring(0, pos);
+                        text = text.replace(/\(/g, "").replace(/\)/g, "");
+                    } 
+                    text = text.replace("(", "").replace(")", "");
+                    $(this).parent().parent().find(".zw-a-text").text(text);
+
+                    setTextAreaVal();
+                });
+
+                e.parent().find(".zw-q2-plus").click(function(){
+                    //console.log("点击了zw-q2-plus");
+                    let text = $(this).parent().parent().find(".zw-a-text").text();
+                    text = text.replace(/\(/g, "").replace(/\)/g, "");
+                    let pos = text.indexOf(":");
+                    if(pos > -1) {
+                        text = text.substring(0, pos);
+                    }
+                    text = "["+text +"]";
+                    $(this).parent().parent().find(".zw-a-text").text(text);
+
+                    setTextAreaVal();
+                });
+                e.parent().find(".zw-q2-minlus").click(function(){
+                    //console.log("点击了zw-q2-minlus");
+                    let text = $(this).parent().parent().find(".zw-a-text").text();
+                    text = text.replace(/\(/g, "").replace(/\)/g, "");
+                    let pos = text.indexOf(":");
+                    if(pos > -1) {
+                        text = text.substring(0, pos);
+                    } 
+                    text = text.replace("[", "").replace("]", "");
+                    $(this).parent().parent().find(".zw-a-text").text(text);
+
+                    setTextAreaVal();
+                });
+
+                e.parent().find(".zw-text-bar").find(".zw-text").keyup(function(){
+                    let v = $(this).val();
+                    let text = $(this).parent().parent().find(".zw-a-text").text();
+                    text = text.replace(/\(/g, "").replace(/\)/g, "");
+                    text = text.replace(/\[/g, "").replace(/\]/g, "");
+                    let pos = text.indexOf(":");
+                    if(pos > -1) {
+                        text = text.substring(0, pos);
+                    } 
+                    if(v != 1) {
+                        text = "("+text + ":" + v + ")";
+                    }
+                    $(this).parent().parent().find(".zw-a-text").text(text);
+
+                    setTextAreaVal();
+                });
+            }
+            function setTextAreaVal() {
+                let html = "";
+                $(".zw-text-ul").find(".zw-a-text").each(function() {
+                    let text = $(this).text();
+                    html += text + ", ";
+                })
+
+                $("#zw-textarea-0").val(html);
+            }
+        </script>
+        <script type="text/javascript">
+        $(document).ready(function() {  
+            var $list = $('.zw-text-ul');  
+            var $lis = $list.children('li');  
+            var dObj = null;
+            $lis.on('dragstart', function(e) {  
+                console.log("dragstart");
+                $(this).addClass('dragging');  
+                //e.dataTransfer.effectAllowed = 'move';  
+                //e.dataTransfer.setData('text/html', $(this).prop('outerHTML'));  
+                dObj = $(this);
+                console.log("dragstart：", dObj.html());
+            }).on('dragend', function(e) {  
+                //console.log("dragend：", $(e.target.parentNode).html());
+                $(this).removeClass('dragging');  
+            }).on('dragover', function(e) {  
+                console.log("dragover");
+                if (e.preventDefault) {  
+                    e.preventDefault(); // Necessary. Allows us to drop.  
+                }  
+                //e.dataTransfer.dropEffect = 'move';  
+                return false;  
+            }).on('drop', function(e) {  
+                console.log("drop");
+                if (e.stopPropagation) {  
+                    e.stopPropagation(); // Stops the browser from redirecting.  
+                }  
+        
+                // Don't do anything if dropping the same column we're dragging.  
+                if ($(this)[0] !== e.target.parentNode) {  
+                    console.log("drop===1");
+                    // Set the source column's HTML to the HTML of the column we dropped on.  
+                    //var dropHtml = e.dataTransfer.getData('text/html');  
+                    $(this).after(dObj); // Insert after the dropped element  
+                    dObj.remove(); // Remove the dragged element from its old location  
+                }  
+                return false;  
+            });  
+
+            $("#btnXihua").click(function(){
+                console.log("点击了AI细化");
+            });
+            
+            $("#btnXihuaQian").click(function(){
+                console.log("点击了AI细化前");
+                //设置按钮不可用
+                $("#btnXihua").attr("disabled", "disabled");
+            });
+            $("#btnXihuaHou").click(function(){
+                console.log("点击了AI细化前");
+                //设置按钮可用
+                $("#btnXihua").removeAttr("disabled");
+            });
+        });
+        </script>
+    </head>
+    <body>
+        <div class="zw-node-prompt-panel" style="display: block;">
+            <div class="zw-close-box"><button type="button" class="zw-btn zw-btn-close" title="关闭">×</button></div>
+            <div class="zw-conent">
+                <div class="zw-input-box">
+                    <textarea class="zw-textarea" id="zw-textarea-0" placeholder="正向提示词, 直接中文即可或直接英文或中英混合">请输入文本1,请输入文本2,请输入文本3,，
+                        请输入文本请输入文本请输入文本。请输入文本
+                    </textarea>
+                    <span class="zw-input-span">
+                        <button type="button" class="zw-btn zw-btn-block" id="btnXihua">AI细化</button>
+                        <button type="button" class="zw-btn zw-btn-block zw-btn-half" id="btnXihuaQian">细化前</button> 
+                        <button type="button" class="zw-btn zw-btn-block zw-btn-half" id="btnXihuaHou">细化后</button>
+                        <button type="button" class="zw-btn zw-btn-block">清除</button>   
+                    </span>
+                    <button type="button" class="zw-btn zw-btn-prompt">确认使用</button>   
+                    
+                </div>
+                <div class="zw-text-box">
+                    <div class="zw-text-box-left">
+                        <div class="zw-text-area" id="zw-text-area">
+                            <ul class="zw-text-ul">
+                                <!--
+                                <li>
+                                    <div class="zw-text-bar">
+                                        <a href="javascript:;" class="zw-a-bar zw-q0-minlus">-</a>
+                                        <input type="text" class="zw-text" value="1.15">
+                                        <a href="javascript:;" class="zw-a-bar zw-q0-plus">+</a>
+                                        <a href="javascript:;" class="zw-a-bar zw-q1-plus">
+                                            ( )+
+                                            <span class="zw-msg-tips">
+                                                <span class="zw-msg-tips-arrow">&#x25B2;</span>
+                                                <span class="zw-msg-tips-text">增强关键词权重：叠加( )</span>
+                                            </span>
+                                        </a>
+                                        <a href="javascript:;" class="zw-a-bar zw-q1-minlus">
+                                            ( )-
+                                            <span class="zw-msg-tips">
+                                                <span class="zw-msg-tips-arrow">&#x25B2;</span>
+                                                <span class="zw-msg-tips-text">增强关键词权重：减少( )</span>
+                                            </span>
+                                        </a>
+                                        <a href="javascript:;" class="zw-a-bar zw-q2-plus">
+                                            [ ]+
+                                            <span class="zw-msg-tips">
+                                                <span class="zw-msg-tips-arrow">&#x25B2;</span>
+                                                <span class="zw-msg-tips-text">减弱关键词权重：叠加[ ]</span>
+                                            </span>
+                                        </a>
+                                        <a href="javascript:;" class="zw-a-bar  zw-q2-minlus">
+                                            [ ]-
+                                            <span class="zw-msg-tips">
+                                                <span class="zw-msg-tips-arrow">&#x25B2;</span>
+                                                <span class="zw-msg-tips-text">减弱关键词权重：减少[ ]</span>
+                                            </span>
+                                        </a>
+                                    </div>
+                                    <a href="javascript:;" class="zw-a-text">测试词1</a><a href="javascript:;" class="zw-a-remove">×</a>
+                                </li>
+                                <li><a href="javascript:;" class="zw-a-text">测试测试词1</a><a href="javascript:;" class="zw-a-remove">×</a></li>
+                                <li><a href="javascript:;" class="zw-a-text">测试词1</a><a href="javascript:;" class="zw-a-remove">×</a></li>
+                                <li><a href="javascript:;" class="zw-a-text">测试测试测试词1</a><a href="javascript:;" class="zw-a-remove">×</a></li>
+                                <li><a href="javascript:;" class="zw-a-text">测试词1</a><a href="javascript:;" class="zw-a-remove">×</a></li>
+-->
+
+
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="zw-text-box-right">
+                        <div class="zw-tab-cond-bar">
+                            <label><input type="checkbox" name="is_fav" class="is_fav">只显示已收藏</label>
+                            <label><input type="radio" name="enable_type" class="enable_cn">使用中文词</label>
+                            <label><input type="radio" name="enable_type" class="enable_en">使用英文词</label>
+                        </div>
+                        <div class="zw-tab-box">
+                            <div class="zw-tab-header">
+                                <a href="javascript:;" class="zw-tab-header-item zw-tab-header-item-on">正向词</a>
+                                <a href="javascript:;" class="zw-tab-header-item">反向词</a>
+                            </div>
+                            <div class="zw-tab-body" style="display: block;">
+                                
+                                <ul class="zw-tab-ul" style="display: block;">
+                                    <li class="zw-tab-ul-li">
+                                        <a href="javascript:;" class="zw-tab-ul-nav zw-tab-ul-nav-on">画质</a>
+                                        
+                                    </li>
+                                    <li class="zw-tab-ul-li">
+                                        <a href="javascript:;" class="zw-tab-ul-nav">风格风格</a>
+                                    </li>
+                                    <li class="zw-tab-ul-li">
+                                        <a href="javascript:;" class="zw-tab-ul-nav">风格风格</a>
+                                    </li>
+                                    <li class="zw-tab-ul-li">
+                                        <a href="javascript:;" class="zw-tab-ul-nav">风格风格</a>
+                                    </li>
+                                    <li class="zw-tab-ul-li">
+                                        <a href="javascript:;" class="zw-tab-ul-nav">风格风格</a>
+                                    </li>
+                                    <li class="zw-tab-ul-li">
+                                        <a href="javascript:;" class="zw-tab-ul-nav">风格风格</a>
+                                    </li>
+                                    <li class="zw-tab-ul-li">
+                                        <a href="javascript:;" class="zw-tab-ul-nav">风格风格</a>
+                                    </li>
+                                    <li class="zw-tab-ul-li">
+                                        <a href="javascript:;" class="zw-tab-ul-nav">风格风格</a>
+                                    </li>
+                                    <li class="zw-tab-ul-li">
+                                        <a href="javascript:;" class="zw-tab-ul-nav">风格风格</a>
+                                    </li>
+                                    <li class="zw-tab-ul-li">
+                                        <a href="javascript:;" class="zw-tab-ul-nav">风格风格</a>
+                                    </li>
+                                    <li class="zw-tab-ul-li">
+                                        <a href="javascript:;" class="zw-tab-ul-nav">风格风格</a>
+                                    </li>
+                                    <li class="zw-tab-ul-li">
+                                        <a href="javascript:;" class="zw-tab-ul-nav">风格风格</a>
+                                    </li>
+                                    <li class="zw-tab-ul-li">
+                                        <a href="javascript:;" class="zw-tab-ul-nav">风格风格</a>
+                                    </li>
+                                    <li class="zw-tab-ul-li">
+                                        <a href="javascript:;" class="zw-tab-ul-nav">风格风格</a>
+                                    </li>
+                                    <li class="zw-tab-ul-li">
+                                        <a href="javascript:;" class="zw-tab-ul-nav">风格风格</a>
+                                    </li>
+                                    <li class="zw-tab-ul-li">
+                                        <a href="javascript:;" class="zw-tab-ul-nav">风格风格</a>
+                                    </li>
+                                </ul>
+                                <ul class="zw-tab-ul-nav-sub" style="display: block;">
+                                    <li><a href="" class="zw-tab-ul-nav-sub-a zw-tab-ul-nav-sub-a-on">格子的</a></li>
+                                    <li><a href="" class="zw-tab-ul-nav-sub-a">格子的</a></li>
+                                    <li><a href="" class="zw-tab-ul-nav-sub-a">格子的</a></li>
+                                    <li><a href="" class="zw-tab-ul-nav-sub-a">格子的</a></li>
+                                    <li><a href="" class="zw-tab-ul-nav-sub-a">格子的</a></li>
+
+                                    <li><a href="" class="zw-tab-ul-nav-sub-a">格子的</a></li>
+                                    <li><a href="" class="zw-tab-ul-nav-sub-a">格子的</a></li>
+                                    <li><a href="" class="zw-tab-ul-nav-sub-a">格子的</a></li>
+                                    <li><a href="" class="zw-tab-ul-nav-sub-a">格子的</a></li>
+                                    <li><a href="" class="zw-tab-ul-nav-sub-a">格子的</a></li>
+
+                                    <li><a href="" class="zw-tab-ul-nav-sub-a">格子的</a></li>
+                                    <li><a href="" class="zw-tab-ul-nav-sub-a">格子的</a></li>
+                                    <li><a href="" class="zw-tab-ul-nav-sub-a">格子的</a></li>
+                                    <li><a href="" class="zw-tab-ul-nav-sub-a">格子的</a></li>
+                                    <li><a href="" class="zw-tab-ul-nav-sub-a">格子的</a></li>
+
+                                    <li><a href="" class="zw-tab-ul-nav-sub-a">格子的</a></li>
+                                    <li><a href="" class="zw-tab-ul-nav-sub-a">格子的</a></li>
+                                    <li><a href="" class="zw-tab-ul-nav-sub-a">格子的</a></li>
+                                    <li><a href="" class="zw-tab-ul-nav-sub-a">格子的</a></li>
+                                    <li><a href="" class="zw-tab-ul-nav-sub-a">格子的</a></li>
+                                </ul>
+                                <ul class="zw-tab-body-item" style="display: block;">
+                                    <li><a href="javascript:;" class="zw-tab-body-item-a">反向词</a>
+                                        <a href="javascript:;" class="zw-tab-body-item-a-fav"><i class="zw-red-true" title="收藏">❤</i></a>
+                                        <div class="zw-tab-body-item-a-bar">
+                                            beautiful detailed glow, (detailed ice), beautiful detailed water,beautiful detailed glow,((flames of war)),(((nuclear explosion behide))),(sunlight),(angel),dynamic angle, floating, wing, halo, floating white silk,(Holy Light),silver stars,
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <a href="javascript:;" class="zw-tab-body-item-a">反向词</a><a href="javascript:;" class="zw-tab-body-item-a-fav"><i class="zw-red-true" title="收藏">❤</i></a>
+                                        <div class="zw-tab-body-item-a-bar">
+                                            <div class="zw-tag-name-cn">美丽详细生长美丽详细生长美丽详细生长美丽详细生长美丽详细生长</div>
+                                            <div class="zw-tag-name-en">
+                                                beautiful detailed glow, (detailed ice),beautiful detailed glow, (detailed ice),beautiful detailed glow, (detailed ice),beautiful detailed glow, (detailed ice), 
+                                            </div>
+                                        </div>
+                                    </li>
+                                    <li><a href="javascript:;" class="zw-tab-body-item-a">详细生长美丽详细生长美丽</a><a href="javascript:;" class="zw-tab-body-item-a-fav"><i class="zw-red-true" title="收藏">❤</i></a></li>
+                                    <li><a href="javascript:;" class="zw-tab-body-item-a">详细生长美丽详细生长美丽</a><a href="javascript:;" class="zw-tab-body-item-a-fav"><i class="zw-red-true" title="收藏">❤</i></a></li>
+                                    <li><a href="javascript:;" class="zw-tab-body-item-a">详细生长美丽详细生长美丽</a><a href="javascript:;" class="zw-tab-body-item-a-fav"><i class="zw-red-true" title="收藏">❤</i></a></li>
+                                    <li><a href="javascript:;" class="zw-tab-body-item-a">详细生长美丽详细生长美丽</a><a href="javascript:;" class="zw-tab-body-item-a-fav"><i class="zw-red-true" title="收藏">❤</i></a></li>
+                                
+                                    <li><a href="javascript:;" class="zw-tab-body-item-a">详细生长美丽详细生长美丽</a><a href="javascript:;" class="zw-tab-body-item-a-fav"><i class="zw-red-true" title="收藏">❤</i></a></li>
+                                    <li><a href="javascript:;" class="zw-tab-body-item-a">详细生长美丽详细生长美丽</a><a href="javascript:;" class="zw-tab-body-item-a-fav"><i class="zw-red-true" title="收藏">❤</i></a></li>
+                                
+                                    <li><a href="javascript:;" class="zw-tab-body-item-a">详细生长美丽详细生长美丽</a><a href="javascript:;" class="zw-tab-body-item-a-fav"><i class="zw-red-true" title="收藏">❤</i></a></li>
+                                    <li><a href="javascript:;" class="zw-tab-body-item-a">详细生长美丽详细生长美丽</a><a href="javascript:;" class="zw-tab-body-item-a-fav"><i class="zw-red-true" title="收藏">❤</i></a></li>
+                                
+                                    <li><a href="javascript:;" class="zw-tab-body-item-a">详细生长美丽详细生长美丽</a><a href="javascript:;" class="zw-tab-body-item-a-fav"><i class="zw-red-true" title="收藏">❤</i></a></li>
+                                    <li><a href="javascript:;" class="zw-tab-body-item-a">详细生长美丽详细生长美丽</a><a href="javascript:;" class="zw-tab-body-item-a-fav"><i class="zw-red-true" title="收藏">❤</i></a></li>
+                                
+                                    <li><a href="javascript:;" class="zw-tab-body-item-a">详细生长美丽详细生长美丽</a><a href="javascript:;" class="zw-tab-body-item-a-fav"><i class="zw-red-true" title="收藏">❤</i></a></li>
+                                    <li><a href="javascript:;" class="zw-tab-body-item-a">详细生长美丽详细生长美丽</a><a href="javascript:;" class="zw-tab-body-item-a-fav"><i class="zw-red-true" title="收藏">❤</i></a></li>
+                                
+                                    <li><a href="javascript:;" class="zw-tab-body-item-a">详细生长美丽详细生长美丽</a><a href="javascript:;" class="zw-tab-body-item-a-fav"><i class="zw-red-true" title="收藏">❤</i></a></li>
+                                    <li><a href="javascript:;" class="zw-tab-body-item-a">详细生长美丽详细生长美丽</a><a href="javascript:;" class="zw-tab-body-item-a-fav"><i class="zw-red-true" title="收藏">❤</i></a></li>
+                                
+                                    <li><a href="javascript:;" class="zw-tab-body-item-a">详细生长美丽详细生长美丽</a><a href="javascript:;" class="zw-tab-body-item-a-fav"><i class="zw-red-true" title="收藏">❤</i></a></li>
+                                    <li><a href="javascript:;" class="zw-tab-body-item-a">详细生长美丽详细生长美丽</a><a href="javascript:;" class="zw-tab-body-item-a-fav"><i class="zw-red-true" title="收藏">❤</i></a></li>
+                                
+                                    <li><a href="javascript:;" class="zw-tab-body-item-a">详细生长美丽详细生长美丽</a><a href="javascript:;" class="zw-tab-body-item-a-fav"><i class="zw-red-true" title="收藏">❤</i></a></li>
+                                    <li><a href="javascript:;" class="zw-tab-body-item-a">详细生长美丽详细生长美丽</a><a href="javascript:;" class="zw-tab-body-item-a-fav"><i class="zw-red-true" title="收藏">❤</i></a></li>
+                                
+                                    <li><a href="javascript:;" class="zw-tab-body-item-a">详细生长美丽详细生长美丽</a><a href="javascript:;" class="zw-tab-body-item-a-fav"><i class="zw-red-true" title="收藏">❤</i></a></li>
+                                    <li><a href="javascript:;" class="zw-tab-body-item-a">详细生长美丽详细生长美丽</a><a href="javascript:;" class="zw-tab-body-item-a-fav"><i class="zw-red-true" title="收藏">❤</i></a></li>
+                                
+                                </ul>
+                                
+                            </div>
+                            <div class="zw-tab-body">
+                            </div>
+                            <div class="zw-tab-body">
+                                <div class="zw-his-srch">
+                                    <input type="text" class="zw-text" placeholder="请输入关键字"/><button type="button" class="zw-btn" id="zw-btn-prompt">搜索</button> 
+                                </div>
+                                <dl class="zw-history-list">
+                                    <dd>
+                                        <span class="zw-dd-span-img"><a href=""><img src="css/109-200x300.jpg"></a></span>
+                                        <span class="zw-dd-span-0">
+                                            <p>提示词详细提示词详细提示词详细示词详细提示词详细提示词详细提示词详细提示词详细示词详细提示词详细提示词详细提示词详细提示词详细示词详细提示词详细提示词详细提示词详细提示词详细示词详细提示词详细提示词详细提示词详细提示词详细示词详细提提示词详细提示词详细提示词详细示词详细提示词详细提示词详细提示词详细提示词详细示词详细提示词详细提示词详细提示词详细提示词详细示词详细提示词详细提示词详细提示词详细提示词详细示词详细提示词详细提示词详细提示词详细提示词详细示词详细提示词详细提示词详细提示词详细提示词详细示词详细提示词详细示词详细提示词详细提示词详细提示词详细示词详细提示词详细</p>
+                                            <div class="zw-dd-bar"><button type="button" class="zw-btn">正向词使用</button></div>
+                                        </span>
+                                        <span class="zw-dd-span-1">
+                                            <p>提示词详细提示词详细提示词详细提示词详细提示词详细提示词详细提示词详细提示词详细提示词详细提示词详细提示词详细提示词详细提示词详细提示词详细提示词详细提示词详细提示词详细提示词详细提示词详细提示词详细提示词详细提示词详细提示词详细提示词详细提示词详细提示词详细提示词详细提示词详细提示词详细提示词详细提示词详细提示词详细提示词详细</p>
+                                            <div class="zw-dd-bar"><button type="button" class="zw-btn">负向词使用</button></div>
+                                        </span>
+                                    </dd>
+                                    <dd>
+                                        <span class="zw-dd-span-img"><a href=""><img src="css/109-200x300.jpg"></a></span>
+                                        <span class="zw-dd-span-0">
+                                            <p>提示词详细提示词详细提示词详细示词详细提示词详细</p>
+                                            
+                                        </span>
+                                        <span class="zw-dd-span-1">
+                                            <p>提示词详细提示词详细提示词详细</p>
+                                            
+                                        </span>
+                                    </dd>
+                                    <dd>
+                                        <span class="zw-dd-span-img"><a href=""><img src="css/109-200x300.jpg"></a></span>
+                                        <span class="zw-dd-span-0"><p>ewqeqeeqweqeqweqeqewq13213123131231qewqewqeqweqeqewqeqewq,ewqewqeqeqewqeq</p></span>
+                                        <span class="zw-dd-span-1"><p>提示词详细提示词详细提示词详细</p></span>
+                                    </dd>
+                                    <dd>
+                                        <span class="zw-dd-span-img"><a href=""><img src="css/109-200x300.jpg"></a></span>
+                                        <span class="zw-dd-span-0"><p>提示词详细提示词详细提示词详细示词详细提示词详细</p></span>
+                                        <span class="zw-dd-span-1"><p>提示词详细提示词详细提示词详细</p></span>
+                                    </dd>
+                                    <dd>
+                                        <span class="zw-dd-span-img"><a href=""><img src="css/109-200x300.jpg"></a></span>
+                                        <span class="zw-dd-span-0"><p>提示词详细提示词详细提示词详细示词详细提示词详细</p></span>
+                                        <span class="zw-dd-span-1"><p>提示词详细提示词详细提示词详细</p></span>
+                                    </dd>
+                                </dl>
+                                <div class="zw-history-page-bar">
+                                    <a href="javascript:void(0);" class="zw-history-page-bar-prev zw-btn">上一页</a>
+                                    <a href="javascript:void(0);" class="zw-history-page-bar-next zw-btn">下一页</a>
+                                </div>
+                            </div>
+                        </div>    
+                    </div>
+                </div>
+
+                
+            </div>
+        </div>
+    </body>
+</html>
