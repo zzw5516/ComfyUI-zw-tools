@@ -22,4 +22,4 @@ ComfyUI插件，提示词自动翻译成中文，提示词自定义管理，提�
 ![我的示例图片](./example/4.png)
 ![我的示例图片](./example/5.png)
 ![我的示例图片](./example/6.png)
-![我的示例图片](./example/7.png)
+![我的示例图片](./example/8.png)
