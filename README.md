@@ -10,6 +10,9 @@ ComfyUI插件，提示词自动翻译成中文，提示词自定义管理，提�
 6. 文件管理UI界面：可以管理本地生成的图片或视频，增删改或上传到云端等操作
 7. 便捷图片或视频文件查看器
 
+## 安装前提
+pip install ffmpeg-python
+
 ## 安装
 1. 方法一：下载后将ComfyUI-zw-tools文件夹 放置到ComfyUI/custom_nodes目录，而后重启ComfyUI 
 2. 方法二：通过ComfyUI-Manager安装
