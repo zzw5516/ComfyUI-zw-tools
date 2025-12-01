@@ -168,6 +168,8 @@ export const nodePrompt = {
         $("#zw-btn-prompt").click(function () {
             let prompt = $(".zw-node-prompt-panel").find(".zw-textarea").val();
             nodePrompt.textarea.val(prompt);
+			nodePrompt.textarea[0].dispatchEvent(new Event('input', { bubbles: true }));
+			nodePrompt.textarea[0].dispatchEvent(new Event('change', { bubbles: true }));
             $(".zw-node-prompt-panel").find(".zw-btn-close").click();
         });
         $("#zw-tab-h-prompt-0").click(function () {
@@ -239,26 +241,52 @@ export const nodePrompt = {
         });
     },
     async bindPromptTextareaEvent() {
-        $(".comfy-multiline-input").unbind("dblclick");
-        $(".comfy-multiline-input").bind('dblclick', function(event) {
-            event.stopPropagation();
+		let textareaTmp = $(".p-textarea");
+		
+		// 1. 获取所有匹配的 textarea 元素（不仅仅是第一个）
+		let textareas = $(".p-textarea");
+		
+		if (textareas.length === 0) {
+			console.warn("未找到 .p-textarea 元素，请确认选择器是否正确或元素是否已渲染");
+		}
 
-            nodePrompt.textarea = $(this);
-            $(".zw-node-prompt-panel").show();
-
-            let prompt = $(this).val();
-            prompt = prompt.replaceAll(/，/g, ",").replaceAll(/。/g, ",").replace(/\r\n/g, ",").replace(/\n/g, ",");
-            $(".zw-node-prompt-panel").find(".zw-textarea").val(prompt);
-
-            $(".zw-tab-header").find(".zw-tab-header-item").removeClass("zw-tab-header-item-on");
-            $(".zw-tab-header").find(".zw-tab-header-item").eq(0).addClass("zw-tab-header-item-on");
-            $(".zw-tab-box").find(".zw-tab-body").hide();
-            $(".zw-tab-box").find(".zw-tab-body").eq(0).show();
+		// 绑定在 document 上，使用【捕获阶段 (true)】
+        // 这样无论节点是现在有的，还是未来 10 分钟后创建的，都能生效
+        document.addEventListener("dblclick", function(e) {
+            const target = e.target;
             
-            nodePrompt.setTextULVal();
-            nodePrompt.bindZwATextEvent();
-            nodePrompt.bindCate0List();
-        });
+            // 检查目标是否是 ComfyUI 的 textarea
+            // v1.3+ 前端通常是 TEXTAREA 标签，且可能有 p-textarea 类
+            if (target && target.tagName === "TEXTAREA" && target.classList.contains("p-textarea")) {
+                
+                console.log("捕捉到 Textarea 双击:", target);
+                
+                // --- 你的业务逻辑写在这里 ---
+				nodePrompt.textarea = $(target);
+				$(".zw-node-prompt-panel").show();
+
+				let prompt = $(target).val();
+				prompt = prompt.replaceAll(/，/g, ",").replaceAll(/。/g, ",").replace(/\r\n/g, ",").replace(/\n/g, ",");
+				$(".zw-node-prompt-panel").find(".zw-textarea").val(prompt);
+
+				$(".zw-tab-header").find(".zw-tab-header-item").removeClass("zw-tab-header-item-on");
+				$(".zw-tab-header").find(".zw-tab-header-item").eq(0).addClass("zw-tab-header-item-on");
+				$(".zw-tab-box").find(".zw-tab-body").hide();
+				$(".zw-tab-box").find(".zw-tab-body").eq(0).show();
+				
+				nodePrompt.setTextULVal();
+				nodePrompt.bindZwATextEvent();
+				nodePrompt.bindCate0List();
+                // -------------------------
+
+                // 阻止事件传给 ComfyUI 画布
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+                e.preventDefault();
+            }
+        }, true); // <--- true 是核心，表示捕获阶段
+		
+        
     },
     async setTextULVal() {
         let prompt = $(".zw-node-prompt-panel").find(".zw-textarea").val();

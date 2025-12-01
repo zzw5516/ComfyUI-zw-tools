@@ -17,8 +17,10 @@ class ZwPrompt:
     def INPUT_TYPES(s):  
        
         return {"required": {
-            "text": ("STRING", {"multiline": True,"placeholder": "双击 呼出 词库面板"}),
+            "enabled_trans": ("BOOLEAN", {"default": True, "label_on": "开启翻译", "label_off": "关闭翻译"}),
+            "text": ("STRING", {"default":"双击 呼出 词库面板","multiline": True,"placeholder": "双击 呼出 词库面板"}),
             "clip": ("CLIP",)
+            
         }}
     
     RETURN_TYPES = ("CONDITIONING","STRING")
@@ -26,9 +28,11 @@ class ZwPrompt:
     CATEGORY = "ZwTools"
     
 
-    def encode(self, clip, text):
-        #print(text)
-        text=translate(text)
+    def encode(self, clip, text, enabled_trans):
+        print(f'######TO BE TRANS Text={text}')
+        if enabled_trans == True:
+            text=translate(text)
+        
         #print(text)
         tokens = clip.tokenize(text)
         cond, pooled = clip.encode_from_tokens(tokens, return_pooled=True)
@@ -55,10 +59,10 @@ def translate(text):
       return respText
     elif used_trans_type == 2:
       respText = zw_local_file_biz.transCN2EN(text)
-      print(f'API_KEY--respText={respText}')
+      print(f'######API_KEY--respText={respText}')
       return respText
     else:
-      print(f'Unabled--text={text}')
+      print(f'######Unabled--text={text}')
       return text
 
 def translateTest(text, baidu_appid, baidu_key):
@@ -75,18 +79,19 @@ class ZwPromptText:
     def INPUT_TYPES(s):  
        
         return {"required": {
-            "text": ("STRING", {"multiline": True,"placeholder": "双击 呼出 词库面板"}),
+            "enabled_trans": ("BOOLEAN", {"default": True, "label": "开/关翻译"}),
+            "text": ("STRING", {"default":"双击 呼出 词库面板","multiline": True, "label": "双击 呼出 词库面板"}),
         }}
     
     RETURN_TYPES = ("STRING",)
-    FUNCTION = "main"
+    FUNCTION = "encode"
     CATEGORY = "ZwTools"
     
 
-    def main(self, text):
-        print(text)
-        text=translate(text)
-        print(text)
+    def encode(self, text, enabled_trans):
+        print(f'######TO BE TRANS Text={text}')
+        if enabled_trans == True:
+            text=translate(text)
         return (text,)
 
 
