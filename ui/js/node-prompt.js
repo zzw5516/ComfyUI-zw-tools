@@ -241,12 +241,12 @@ export const nodePrompt = {
         });
     },
     async bindPromptTextareaEvent() {
-		let textareaTmp = $(".p-textarea");
-		
 		// 1. 获取所有匹配的 textarea 元素（不仅仅是第一个）
 		let textareas = $(".p-textarea");
 		
 		if (textareas.length === 0) {
+			textareas = $(".comfy-multiline-input");
+			
 			console.warn("未找到 .p-textarea 元素，请确认选择器是否正确或元素是否已渲染");
 		}
 
@@ -257,7 +257,7 @@ export const nodePrompt = {
             
             // 检查目标是否是 ComfyUI 的 textarea
             // v1.3+ 前端通常是 TEXTAREA 标签，且可能有 p-textarea 类
-            if (target && target.tagName === "TEXTAREA" && target.classList.contains("p-textarea")) {
+            if (target && target.tagName === "TEXTAREA" && (target.classList.contains("p-textarea") || target.classList.contains("comfy-multiline-input"))) {
                 
                 console.log("捕捉到 Textarea 双击:", target);
                 
