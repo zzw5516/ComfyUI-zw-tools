@@ -698,8 +698,9 @@ export const imageBrowser = {
        let html = "";
        for(let i=0; i < images.length; i++) {
             let objImg = images[i];
-
-            let imgUrl = objImg != "" ? location.href + "view?filename="+objImg.filename+"&subfolder="+objImg.subfolder+"&type="+objImg.type+"&rand="+Math.random() : "";
+            let posX = location.href.lastIndexOf("#");
+            let baseUrl = posX > -1 ? location.href.substring(0, posX) : location.href;
+            let imgUrl = objImg != "" ? baseUrl + "view?filename="+objImg.filename+"&subfolder="+objImg.subfolder+"&type="+objImg.type+"&rand="+Math.random() : "";
             if(objImg.filename.indexOf(".mp4") > -1) {
                 html += `
                     <li><a href="javascript:;" class="zw-ib-bar-a"><video src="${imgUrl}"></video></a><a href="javascript:;" class="zw-ib-bar-a-del" title="仅从工具栏移除，不删除文件">×</a></li>
@@ -864,8 +865,9 @@ export const imageBrowser = {
                 upload_state_label = "已上传";
             }
             upload_state_label = upload_state_label +is_gui_dang;
-
-            let imgUrl = location.href + "view?filename="+filename+"&subfolder="+subfolder+"&type="+type+"&rand="+Math.random();
+            let posX = location.href.lastIndexOf("#");
+            let baseUrl = posX > -1 ? location.href.substring(0, posX) : location.href;
+            let imgUrl = baseUrl + "view?filename="+filename+"&subfolder="+subfolder+"&type="+type+"&rand="+Math.random();
 
             let fileContainer = `<img class="" src="${imgUrl}" title="${prompt0}">`;
             if(filename.indexOf(".mp4") > -1) {
