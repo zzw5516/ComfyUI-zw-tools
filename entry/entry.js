@@ -1,6 +1,8 @@
 //@ts-ignore
 import { app } from "../../../scripts/app.js";
 import { api } from "../../../scripts/api.js";
+// 显式引入 jQuery，避免依赖 ComfyUI 扫描 /extensions 时的文件加载顺序。
+import "../ui/js/jquery.min.js";
 //import { uploadPanel } from "../comfyui-zw-tools/ui/js/upload-panel.js";
 import { nodePrompt } from "../ui/js/node-prompt.js";
 import { imageBrowser } from "../ui/js/image-browser.js";
@@ -17,86 +19,101 @@ const ext = {
 		//console.log("dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd")
 		// Any setup to run after the app is created
 		//console.log("[logging]", "extension setup");
-		let allImages = [];
-
+		// 新版前端的 graphToPrompt 结果可能包含 Vue/响应式代理对象，
+		// structuredClone 会抛出 "could not be cloned"，并影响所有调用该方法的模块。
+		// 这里保留克隆行为，但增加 JSON 克隆兜底，避免把异常抛给其它扩展。
 		const _original_graphToPrompt = app.graphToPrompt;
-        app.graphToPrompt = async function () {
-            const p = structuredClone(await _original_graphToPrompt.apply(app));
-            return p;
-        };
+		app.graphToPrompt = async function (...args) {
+			const prompt = await _original_graphToPrompt.apply(app, args);
+			try {
+				return typeof structuredClone === "function" ? structuredClone(prompt) : prompt;
+			} catch (cloneError) {
+				try {
+					return JSON.parse(JSON.stringify(prompt));
+				} catch (jsonError) {
+					console.warn("[zw-tools] graphToPrompt 克隆失败，返回原始结果:", cloneError);
+					return prompt;
+				}
+			}
+		};
 		api.addEventListener("execution_start", (e) => {
-			//console.log("=============================api.execution_start=============================",e.detail);
-			prompt_id = e.detail.prompt_id;
+			const detail = e && e.detail;
+			if (detail && typeof detail === "object" && detail.prompt_id) {
+				prompt_id = detail.prompt_id;
+			} else if (detail) {
+				prompt_id = detail;
+			}
 		});
 		api.addEventListener("executing", async (e) => {
-			//console.log("=============================api.executing=============================");
-			
-			if(e.detail === null) {
-				let tmp_prompt_id = prompt_id;
-				//console.log("==============completed=============="+e.target.initialClientId);
-				const res = await fetch('/history/' + tmp_prompt_id)
-				const jsonData = await res.json()
+			const detail = e ? e.detail : null;
+			// 旧版前端把节点 id 直接作为 detail，执行结束时为 null；
+			// 新版前端仍会映射成 null，这里同时兼容直接传 { node: null, prompt_id } 的实现。
+			const isExecutionFinished = detail === null
+				|| (detail && typeof detail === "object" && detail.node === null && !detail.display_node);
+			if (!isExecutionFinished) return;
 
-				//console.log("=====jsonData====="+JSON.stringify(jsonData));
-				//console.log("=====jsonData==outputs==="+JSON.stringify(jsonData[prompt_id].outputs));
-				
+			const tmp_prompt_id = (detail && typeof detail === "object" && detail.prompt_id)
+				? detail.prompt_id
+				: prompt_id;
+			if (!tmp_prompt_id) return;
 
-				let data = jsonData[tmp_prompt_id];
-				// 初始化一个空数组来存储所有找到的images数组  
-				allImages = [];  
-				let input_texts = [];  
+			try {
+				const res = await fetch('/history/' + encodeURIComponent(tmp_prompt_id));
+				if (!res.ok) return;
 
-				// 查找生成的outputs中包含images数组的节点  
-				for (let key in data.outputs) {  
-					if (data.outputs.hasOwnProperty(key)) { // 确保key是data.outputs的自有属性  
-						const value = data.outputs[key];  
-						
-						// 检查当前值是否包含images数组  
-						if (Array.isArray(value.images)) {  
-							// 如果包含，将images数组添加到allImages数组中  
-							for (let i = 0; i < value.images.length; i++) {  
-								allImages.push(value.images[i]);  
-							}
-						}  
-						// 检查当前值是否包含gifs数组  
-						if (Array.isArray(value.gifs)) {  
-							for (let i = 0; i < value.gifs.length; i++) {  
-								allImages.push(value.gifs[i]);  
-							}
-						}  
-					}  
-				}  
-				//查找用到的提示词
-				let prompt = jsonData[tmp_prompt_id].prompt;
-				for (let i = 0; i < prompt.length; i++) { 
-					let item = prompt[i];
-					for (let key in item) {  
-						if (item.hasOwnProperty(key)) { // 确保key是data.outputs的自有属性  
-							const obj = item[key];  
-							
-							if (obj.hasOwnProperty("inputs") && obj.hasOwnProperty("class_type")) { 
-								if ((obj.class_type == "ZwPrompt" ||obj.class_type == "ZwPromptText" ) &&  obj.inputs.hasOwnProperty("text")) { 
-									const value = obj.inputs.text;
-									//console.log("value===="+JSON.stringify(value));
-									if(value != "") { input_texts.push(value); }
-								}
-							}
+				const jsonData = await res.json();
+				const data = jsonData ? jsonData[tmp_prompt_id] : null;
+				if (!data) return;
+
+				const allImages = [];
+				const input_texts = [];
+				const outputs = data.outputs || {};
+
+				// 收集本次执行生成的所有图片/动图
+				for (const key of Object.keys(outputs)) {
+					const value = outputs[key] || {};
+					if (Array.isArray(value.images)) {
+						allImages.push(...value.images);
+					}
+					if (Array.isArray(value.gifs)) {
+						allImages.push(...value.gifs);
+					}
+				}
+
+				// 查找本次执行用到的 ZwPrompt / ZwPromptText 提示词
+				const prompt = Array.isArray(data.prompt) ? data.prompt : [];
+				for (const item of prompt) {
+					if (!item || typeof item !== "object") continue;
+					for (const key of Object.keys(item)) {
+						const obj = item[key];
+						if (!obj || typeof obj !== "object") continue;
+						if (obj.inputs && obj.class_type
+							&& (obj.class_type === "ZwPrompt" || obj.class_type === "ZwPromptText")
+							&& Object.prototype.hasOwnProperty.call(obj.inputs, "text")) {
+							const value = obj.inputs.text;
+							if (value) input_texts.push(value);
 						}
 					}
 				}
-				//提取工作流
+
+				// 提取工作流
 				let wkfl = null;
-				for (let i = 0; i < prompt.length; i++) { 
-					let item = prompt[i];
-					for (let key in item) {  
-						if (item.hasOwnProperty("extra_pnginfo")) { // 确保key是data.outputs的自有属性  
-							wkfl = item["extra_pnginfo"]["workflow"]
-							break;
-						}
+				for (const item of prompt) {
+					if (!item || typeof item !== "object") continue;
+					if (Object.prototype.hasOwnProperty.call(item, "extra_pnginfo")) {
+						wkfl = item["extra_pnginfo"] && item["extra_pnginfo"]["workflow"];
+						break;
 					}
 				}
-				imageBrowser.saveLocalFile(input_texts, allImages, wkfl, tmp_prompt_id);
-				imageBrowser.bindImageBrowserBarItems(allImages);
+
+				if (imageBrowser && typeof imageBrowser.saveLocalFile === "function") {
+					await imageBrowser.saveLocalFile(input_texts, allImages, wkfl, tmp_prompt_id);
+				}
+				if (imageBrowser && typeof imageBrowser.bindImageBrowserBarItems === "function") {
+					imageBrowser.bindImageBrowserBarItems(allImages);
+				}
+			} catch (err) {
+				console.error("[zw-tools] 保存生成记录失败:", err);
 			}
 		});
 		// 创建一个按钮
@@ -117,9 +134,6 @@ const ext = {
 		*/
 		//alert("dsadsa");
 		addCssLink();
-		addJSLink();
-		//uploadPanel.initHtml();
-		//uploadPanel.initEvent();
 
 		nodePrompt.initHtml();
 		nodePrompt.initEvent();
@@ -152,50 +166,46 @@ const ext = {
 		//console.log("[logging]", "register custom nodes");
 	},
 	loadedGraphNode(node, app) {
-		if(!node.doc_enabled) {
+		// 只处理本插件的两个节点，避免影响其它节点。
+		if (!node || (node.type !== "ZwPrompt" && node.type !== "ZwPromptText")) return;
+
+		if (!node.doc_enabled) {
 			const orig = node.onDrawForeground;
 			node.onDrawForeground = function (ctx) { 
-				if("ZwPrompt" == node.type || "ZwPromptText" == node.type) {
-					drawDocIcon(node, orig, arguments) 
-				}
-			};
-		}
-
-		const oDb = node.onMouseDown
-		node.onMouseDown = function(e) {
-			oDb?.apply(node, arguments)
-			const { canvasX, canvasY } = e
-
-			// 通过node的位置信息判断是否点击了文档图标
-			const [nLeft, nTop, nWidth, nHeight] = node.getBounding()
-			const iconX = nLeft + nWidth - 22
-			const iconY = nTop
-			const iconX1 = nLeft + nWidth
-			const iconY1 = nTop + 22
-			//console.log(canvasX, canvasY, iconX, iconY, iconX1, iconY1)
-			if(canvasX >= iconX && canvasX <= iconX1 && canvasY >= iconY && canvasY <= iconY1) {
-				console.log('打开文档')
-				showNodeDocs(node)
-				e.preventDefault()
-				e.stopPropagation()
-				return false
-			}
-		}
-	},
-	nodeCreated(node, app) {
-		if(!node.doc_enabled ) {
-			let orig = node.onDrawForeground;
-			if(!orig)
-				orig = node.__proto__.onDrawForeground;
-			node.onDrawForeground = function (ctx) {
-				if("ZwPrompt" == node.type || "ZwPromptText" == node.type) {
-			  		drawDocIcon(node, orig, arguments)
-					nodePrompt.bindPromptTextareaEvent();
-				}
+				drawDocIcon(node, orig, arguments);
 			};
 			node.doc_enabled = true;
-			//console.log('=======', node)
 		}
+
+		if (node._zwDocMouseDownBound) return;
+		node._zwDocMouseDownBound = true;
+
+		const oDb = node.onMouseDown;
+		node.onMouseDown = function(e) {
+			const result = typeof oDb === "function" ? oDb.apply(node, arguments) : undefined;
+			if (!e || typeof e.canvasX !== "number" || typeof e.canvasY !== "number") return result;
+
+			// 通过node的位置信息判断是否点击了文档图标
+			const bounds = node.getBounding ? node.getBounding() : null;
+			if (!bounds) return result;
+			const [nLeft, nTop, nWidth] = bounds;
+			const iconX = nLeft + nWidth - 22;
+			const iconY = nTop;
+			const iconX1 = nLeft + nWidth;
+			const iconY1 = nTop + 22;
+			if(e.canvasX >= iconX && e.canvasX <= iconX1 && e.canvasY >= iconY && e.canvasY <= iconY1) {
+				showNodeDocs(node);
+				if (e.preventDefault) e.preventDefault();
+				if (e.stopPropagation) e.stopPropagation();
+				return false;
+			}
+			return result;
+		};
+	},
+	nodeCreated(node, app) {
+		// 新建节点也绑定文档图标事件（旧版只对从工作流加载的节点生效）。
+		if (!node || (node.type !== "ZwPrompt" && node.type !== "ZwPromptText")) return;
+		ext.loadedGraphNode(node, app);
 	}
 };
 
@@ -203,10 +213,17 @@ app.registerExtension(ext);
 
 const cacheNodePositonMap = new Map();
 const drawDocIcon = function(node, orig, restArgs) {
-  	let ctx = restArgs[0];
- 	const r = orig?.apply?.(node, restArgs);
+	const ctx = restArgs ? restArgs[0] : null;
+	const r = typeof orig === "function" ? orig.apply(node, restArgs) : undefined;
+	// 新版前端仍然通过 window.LiteGraph 暴露常量，这里做兼容保护。
+	const litegraph = typeof window !== "undefined" ? window.LiteGraph : undefined;
+	if (!ctx || !litegraph) return r;
 
- 	if (!node.flags.collapsed && node.constructor.title_mode != LiteGraph.NO_TITLE) {
+	const size = node.size || [0, 0];
+	const titleMode = node.constructor ? node.constructor.title_mode : undefined;
+	const collapsed = node.flags ? node.flags.collapsed : false;
+
+	if (!collapsed && titleMode != litegraph.NO_TITLE) {
 		const docIcon = '📘';
 		let fgColor = "white";
 
@@ -216,31 +233,56 @@ const drawDocIcon = function(node, orig, restArgs) {
 		const sz = ctx.measureText(docIcon);
 		ctx.beginPath();
 		ctx.fillStyle = fgColor;
-		const x = node.size[0] - sz.width - 6;
-		const y = -LiteGraph.NODE_TITLE_HEIGHT + 22;
+		const x = size[0] - sz.width - 6;
+		const y = -(litegraph.NODE_TITLE_HEIGHT || 30) + 22;
 		ctx.fillText(docIcon, x, y);
 		ctx.restore();
 
-		const boundary = node.getBounding();
-		const [ x1, y1, width, height ] = boundary
-		cacheNodePositonMap.set(node.id, {
-		x: [x1 + x, x1 + x + sz.width],
-		y: [y1 , y1 + 22]
-		})
+		const boundary = node.getBounding ? node.getBounding() : null;
+		if (boundary) {
+			const [ x1, y1 ] = boundary;
+			cacheNodePositonMap.set(node.id, {
+				x: [x1 + x, x1 + x + sz.width],
+				y: [y1 , y1 + 22]
+			});
+		}
 
 		if (node.has_errors) {
-		ctx.save();
-		ctx.font = "bold 14px sans-serif";
-		const sz2 = ctx.measureText(node.type);
-		ctx.fillStyle = 'white';
-		ctx.fillText(node.type, node.size[0] / 2 - sz2.width / 2, node.size[1] / 2);
-		ctx.restore();
+			ctx.save();
+			ctx.font = "bold 14px sans-serif";
+			const sz2 = ctx.measureText(node.type);
+			ctx.fillStyle = 'white';
+			ctx.fillText(node.type, size[0] / 2 - sz2.width / 2, size[1] / 2);
+			ctx.restore();
 		}
-  	}
-  	return r
+	}
+	return r;
 }
 const nodeDocsEleMap = new Map();
 let activeDocsEle = null;
+
+const escapeHtml = function(text) {
+	return String(text).replace(/[&<>"']/g, (ch) => ({
+		'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+	}[ch]));
+};
+
+const renderMarkdown = function(content) {
+	if (!content) return '';
+	// 旧版 ComfyUI 页面里有全局 marked；新版前端已经不再暴露它。
+	const markedLib = (typeof globalThis !== "undefined" && globalThis.marked)
+		? globalThis.marked
+		: (typeof window !== "undefined" ? window.marked : undefined);
+	if (markedLib && typeof markedLib.parse === "function") {
+		try {
+			return markedLib.parse(content);
+		} catch (err) {
+			console.warn("[zw-tools] Markdown 渲染失败，使用纯文本显示:", err);
+		}
+	}
+	return `<pre style="white-space:pre-wrap;word-break:break-word;margin:0;">${escapeHtml(content)}</pre>`;
+};
+
 /**
  * 显示节点文档
  * @param {*} node
@@ -249,7 +291,6 @@ let activeDocsEle = null;
 const showNodeDocs = async function(node) {
 
 	const ele = nodeDocsEleMap.get(node.id)
-	const [nLeft, nTop, nWidth, nHeight] = node.getBounding()
 	if(ele) {
 	  ele.style.display = 'block'
 	  // 更新位置
@@ -313,12 +354,19 @@ const showNodeDocs = async function(node) {
 	divWrap.appendChild(divContentWrap)
   
   
-	const res = await fetch('/customnode/getNodeInfo?nodeName=' + node.type)
-	const jsonData = await res.json()
-	console.log(marked, jsonData)
-	const html = marked.parse(jsonData.content);
-  
-	divContentWrap.innerHTML = html || node.description || '暂无文档'
+	let content = '';
+	try {
+		const res = await fetch('/customnode/getNodeInfo?nodeName=' + encodeURIComponent(node.type));
+		if (res.ok) {
+			const jsonData = await res.json();
+			content = (jsonData && jsonData.content) || '';
+		}
+	} catch (err) {
+		console.warn("[zw-tools] 读取节点文档失败:", err);
+	}
+	const html = renderMarkdown(content);
+
+	divContentWrap.innerHTML = html || node.description || '暂无文档';
   
 
 	if (activeDocsEle) {
@@ -332,42 +380,53 @@ const hideActiveDocs = function() {
 	if(activeDocsEle === null || activeDocsEle === undefined) return;
 	activeDocsEle.style.display = 'none';
 }
-const processMouseDown = LGraphCanvas.prototype.processMouseDown;
-LGraphCanvas.prototype.processMouseDown = function(e) {
-  //console.log('🚀 ~ arguments:', arguments)
-  processMouseDown.apply(this, arguments)
-  const { canvasX, canvasY } = e
-  const nodes = app.graph._nodes
-  let isClickDoc = false
-  for(let i = 0; i < nodes.length; i++) {
-    const node = nodes[i]
-    const [nL, nT, nW, nH] = node.getBounding()
-    const iconX = nL + nW - 22
-    const iconY = nT
-    const iconX1 = nL + nW
-    const iconY1 = nT + 22
 
-    if(canvasX >= iconX && canvasX <= iconX1 && canvasY >= iconY && canvasY <= iconY1) {
-      isClickDoc = true
-      break
-    }
-  }
+// 新版前端仍然通过 window.LGraphCanvas 暴露画布类，但不是所有版本都保证存在，
+// 因此这里先做存在性检查，避免扩展加载时直接抛异常。
+const LGraphCanvasCtor = typeof window !== "undefined" ? window.LGraphCanvas : undefined;
+if (LGraphCanvasCtor && LGraphCanvasCtor.prototype && typeof LGraphCanvasCtor.prototype.processMouseDown === "function") {
+	const processMouseDown = LGraphCanvasCtor.prototype.processMouseDown;
+	LGraphCanvasCtor.prototype.processMouseDown = function(e) {
+		const result = processMouseDown.apply(this, arguments);
+		if (!e || typeof e.canvasX !== "number" || typeof e.canvasY !== "number") return result;
 
-  if(!isClickDoc) {
-    hideActiveDocs()
-  }
+		const { canvasX, canvasY } = e;
+		const nodes = (app.graph && app.graph._nodes) || [];
+		let isClickDoc = false;
+
+		for (const node of nodes) {
+			if (!node || typeof node.getBounding !== "function") continue;
+			const bounds = node.getBounding();
+			if (!bounds) continue;
+
+			const [nL, nT, nW] = bounds;
+			const iconX = nL + nW - 22;
+			const iconY = nT;
+			const iconX1 = nL + nW;
+			const iconY1 = nT + 22;
+
+			if(canvasX >= iconX && canvasX <= iconX1 && canvasY >= iconY && canvasY <= iconY1) {
+				isClickDoc = true;
+				break;
+			}
+		}
+
+		if(!isClickDoc) {
+			hideActiveDocs();
+		}
+		return result;
+	};
 }
 const addCssLink = function() {
 	const link = document.createElement('link');
 	link.rel = 'stylesheet';
-	link.href = "./extensions/ComfyUI-zw-tools/ui/css/zw.css";
+	// 使用当前模块 URL 计算样式路径，插件目录被重命名或 ComfyUI 部署在子路径下也能正确加载。
+	try {
+		link.href = new URL('../ui/css/zw.css', import.meta.url).href;
+	} catch (e) {
+		link.href = "./extensions/ComfyUI-zw-tools/ui/css/zw.css";
+	}
 	document.head.appendChild(link);
-}
-const addJSLink = function() {
-	const scrt = document.createElement('script');
-	scrt.type = 'text/javascript';
-	scrt.src = "./extensions/ComfyUI-zw-tools/ui/js/jquery.min.js";
-	document.head.appendChild(scrt);
 }
 const showUploadPanel = function() {
 	const divWrap = document.createElement('div');

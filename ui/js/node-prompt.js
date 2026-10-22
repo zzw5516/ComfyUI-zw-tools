@@ -241,14 +241,9 @@ export const nodePrompt = {
         });
     },
     async bindPromptTextareaEvent() {
-		// 1. 获取所有匹配的 textarea 元素（不仅仅是第一个）
-		let textareas = $(".p-textarea");
-		
-		if (textareas.length === 0) {
-			textareas = $(".comfy-multiline-input");
-			
-			console.warn("未找到 .p-textarea 元素，请确认选择器是否正确或元素是否已渲染");
-		}
+		// 只绑定一次。旧实现会在节点重绘时重复调用，导致 document 上挂载大量重复监听器。
+		if (nodePrompt._promptDoubleClickBound) return;
+		nodePrompt._promptDoubleClickBound = true;
 
 		// 绑定在 document 上，使用【捕获阶段 (true)】
         // 这样无论节点是现在有的，还是未来 10 分钟后创建的，都能生效
@@ -256,16 +251,16 @@ export const nodePrompt = {
             const target = e.target;
             
             // 检查目标是否是 ComfyUI 的 textarea
-            // v1.3+ 前端通常是 TEXTAREA 标签，且可能有 p-textarea 类
-            if (target && target.tagName === "TEXTAREA" && (target.classList.contains("p-textarea") || target.classList.contains("comfy-multiline-input"))) {
-                
-                console.log("捕捉到 Textarea 双击:", target);
+            // v1.3+ 前端通常是 TEXTAREA 标签，且可能有 p-textarea / comfy-multiline-input 类
+            if (target && target.tagName === "TEXTAREA"
+                && target.classList
+                && (target.classList.contains("p-textarea") || target.classList.contains("comfy-multiline-input"))) {
                 
                 // --- 你的业务逻辑写在这里 ---
 				nodePrompt.textarea = $(target);
 				$(".zw-node-prompt-panel").show();
 
-				let prompt = $(target).val();
+				let prompt = $(target).val() || "";
 				prompt = prompt.replaceAll(/，/g, ",").replaceAll(/。/g, ",").replace(/\r\n/g, ",").replace(/\n/g, ",");
 				$(".zw-node-prompt-panel").find(".zw-textarea").val(prompt);
 
@@ -574,7 +569,9 @@ export const nodePrompt = {
             let subfolder = item[4];
             let type = item[5];
             let is_fav = item[6];
-            let imgUrl = location.href + "view?filename="+filename+"&subfolder="+subfolder+"&type="+type+"&rand="+Math.random();
+            let posX = location.href.lastIndexOf("#");
+            let baseUrl = posX > -1 ? location.href.substring(0, posX) : location.href;
+            let imgUrl = baseUrl + "view?filename="+filename+"&subfolder="+subfolder+"&type="+type+"&rand="+Math.random();
             //let prompt_id = item[7];
 
             let fileContainer = `<img class="" src="${imgUrl}">`;

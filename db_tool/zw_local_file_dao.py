@@ -111,7 +111,7 @@ def find_by_id_db(recordId):
     data = c.fetchall()
     c.close()
     conn.close()
-    return data if data[0] else None
+    return data if data else None
 def find_count_db(keywords="", is_fav="false", is_un_upload="-1", add_time='', cate_keys='', is_gui_dang="-1"):
     sql = "SELECT COUNT(recordId) FROM local_file WHERE 1=1"
     params_list = []

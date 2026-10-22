@@ -106,7 +106,9 @@ export const uploadPanel = {
         if(images === null || images === undefined) return;
 
         for(let i = 0; i < images.length; i++){
-            let src = location.href + "view?filename="+images[i].filename+"&subfolder="+images[i].subfolder+"&type="+images[i].type+"&rand="+Math.random();
+            let posX = location.href.lastIndexOf("#");
+            let baseUrl = posX > -1 ? location.href.substring(0, posX) : location.href;
+            let src = baseUrl + "view?filename="+images[i].filename+"&subfolder="+images[i].subfolder+"&type="+images[i].type+"&rand="+Math.random();
             html += `
                 <li>
                     <img src="${src}" alt="${images[i].filename}">
@@ -122,7 +124,7 @@ export const uploadPanel = {
     async getParams() {
         const res = await fetch('/zw_tools/get_params')
         const jsonData = await res.json()
-        console.log(marked, jsonData)
+        console.log(jsonData)
         $(".zw-param-ul").find("input[name='baidu_key']").val(jsonData.baidu_key);
         $(".zw-param-ul").find("input[name='tuqu_key']").val(jsonData.tuqu_key);
     },
@@ -132,7 +134,7 @@ export const uploadPanel = {
         let tuqu_key = $(".zw-param-ul").find("input[name='tuqu_key']").val();
         const res = await fetch('/zw_tools/save_params?baidu_key=' + baidu_key + '&tuqu_key=' + tuqu_key);
         const jsonData = await res.json()
-        console.log(marked, jsonData)
+        console.log(jsonData)
         if(jsonData.code == 0) {
             $("#zw-bars-msg").show();
             $("#zw-bars-msg").html("保存成功");
@@ -145,7 +147,7 @@ export const uploadPanel = {
         let baidu_key = $(".zw-param-ul").find("input[name='baidu_key']");
         const res = await fetch('/zw_tools/test_baidu?baidu_key='+baidu_key);
         const jsonData = await res.json()
-        console.log(marked, jsonData)
+        console.log(jsonData)
         if(jsonData.code == 0) {
             alert("测试成功:"+jsonData.msg);
         } else {
@@ -169,6 +171,6 @@ export const uploadPanel = {
             }
         );
         const jsonData = await res.json()
-        console.log(marked, jsonData)
+        console.log(jsonData)
     }
 };

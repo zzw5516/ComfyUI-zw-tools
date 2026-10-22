@@ -111,18 +111,19 @@ class ZwPromptText:
 @server.PromptServer.instance.routes.get("/customnode/getNodeInfo")
 async def fetch_customnode_node_info(request):
   try:
-    node_name = request.rel_url.query["nodeName"]
-    data = await request.json()
-    table = data['table']
-    json_data = data['json']
-
-    if not node_name:
+    # 这是一个 GET 请求，不能读取 request.json()，否则会一直等待请求体。
+    raw_node_name = request.rel_url.query.get("nodeName", "")
+    # 只允许当前目录下的纯文件名，避免 ../ 路径穿越。
+    node_name = os.path.basename(str(raw_node_name)).strip()
+    if not node_name or node_name in (".", ".."):
       return web.json_response({"content": ""})
-    
+
     CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-    file_path = os.path.join(CURRENT_DIR, 'docs', node_name + '.md')
-    if os.path.exists(file_path):
-      with open(file_path, 'r', encoding='utf-8') as file:
+    docs_dir = os.path.join(CURRENT_DIR, 'docs')
+    file_path = os.path.join(docs_dir, node_name + '.md')
+    if os.path.isfile(file_path):
+      # utf-8-sig 兼容 Windows 下带 BOM 的 Markdown 文件。
+      with open(file_path, 'r', encoding='utf-8-sig') as file:
         return web.json_response({"content": file.read()})
     else:
       return web.json_response({"content": ""})

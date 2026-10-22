@@ -9,12 +9,45 @@ import requests
 import base64
 import threading
 
-import ffmpeg
+# ffmpeg 只是视频缩略图的可选依赖，缺少时不应该让整个插件加载失败。
+try:
+    import ffmpeg
+except Exception:  # pragma: no cover - 取决于运行环境
+    ffmpeg = None
+
+try:
+    import folder_paths
+except Exception:  # pragma: no cover - 非 ComfyUI 环境下的兜底
+    folder_paths = None
+
 import re
 import time
 
 #remote_api_uri = "http://localhost:8080/ai_comfyui/"
 remote_api_uri = "https://www.ai8808.com/"
+
+
+def get_directory_by_type(file_type):
+    """返回 ComfyUI 实际的 output/temp/input 目录。
+
+    ComfyUI 支持 --base-directory / --output-directory / --temp-directory，
+    因此不能再假设这些目录一定位于进程当前工作目录下。
+    """
+    file_type = str(file_type or "").lower()
+    if folder_paths is not None:
+        try:
+            directory = folder_paths.get_directory_by_type(file_type)
+            if directory:
+                return directory
+        except Exception:
+            pass
+    return os.path.join(os.getcwd(), file_type)
+
+
+def get_file_path(file_type, subfolder, filename):
+    """按 ComfyUI 的实际目录规则拼出文件路径。"""
+    return os.path.join(get_directory_by_type(file_type), subfolder or "", filename)
+
 
 def create_table():
     create_table_db()
@@ -50,8 +83,6 @@ def insert(input_texts,out_images,work_flow_json,prompt_id) -> None:
     work_flow_json = json.dumps(work_flow_json) #json转str
    
 
-    current_dir = os.getcwd()
-    sub_dir_day = getCurrDay()
     for item in json_array:
         # 访问每个字典中的值  
         filename = item["filename"]  
@@ -97,7 +128,7 @@ def move_tmp_output(checked_ids):
     checked_ids = checked_ids.replace("[",'').replace("]",'')
     listData = find_list_by_ids_db(checked_ids) 
 
-    current_dir = os.getcwd() 
+    output_dir = get_directory_by_type('output')
     for item in listData:
         recordId = item[0]
         filename = item[1]
@@ -109,9 +140,9 @@ def move_tmp_output(checked_ids):
         if filename.endswith(".mp4"):
             end_path_type = 'video'
             filename_new = getCurrTimefff()+".mp4"
-        file = os.path.join(current_dir, file_type, subfolder, filename)
+        file = get_file_path(file_type, subfolder, filename)
         if os.path.exists(file):
-            move_dir_day = os.path.join(current_dir, 'output', subfolder, )
+            move_dir_day = os.path.join(output_dir, subfolder or "")
             os.makedirs(move_dir_day, exist_ok=True) 
             shutil.move(file, os.path.join(move_dir_day, filename_new))
             update_type_db(subfolder, filename_new, recordId)
@@ -121,16 +152,14 @@ def delLocalFile(item):
     subfolder = item[2]
     file_type = item[3]
 
-    # 获取当前工作目录  
-    current_dir = os.getcwd()  
-    file = os.path.join(current_dir, file_type, subfolder, filename)
+    file = get_file_path(file_type, subfolder, filename)
     if os.path.exists(file):
         print(f"remove 当前file: {file}")
         os.remove(file)
 
     if filename.endswith(".mp4"): #移除视频缩略图
         filename_new = filename.split('.')[0]+".png"
-        thumbnail_file = os.path.join(current_dir, file_type, subfolder, filename_new)
+        thumbnail_file = get_file_path(file_type, subfolder, filename_new)
         if os.path.exists(thumbnail_file):
             print(f"remove 当前thumbnail_file: {thumbnail_file}")
             os.remove(thumbnail_file)
@@ -167,13 +196,12 @@ def do_upload_multi_files_by_thread(checked_ids):
         url_upload_file = remote_api_uri+"api_comfyui/upload_file"
         url_upload_info = remote_api_uri+"api_comfyui/upload_info"
 
-        current_dir = os.getcwd()  
         for item in listData:
             filename = item[1]
             subfolder = item[2]
             file_type = item[3]
             
-            file = os.path.join(current_dir, file_type, subfolder, filename)
+            file = get_file_path(file_type, subfolder, filename)
             if os.path.exists(file):
 
                 if filename.endswith(".mp4"):
@@ -187,16 +215,17 @@ def do_upload_multi_files_by_thread(checked_ids):
     except Exception as e:
         print(f"do_upload_multi_files_by_thread发生异常:{e}")
 def upload_by_video(item, url_upload_file,url_upload_info, api_key):
-    current_dir = os.getcwd()  
     filename = item[1]
     subfolder = item[2]
     file_type = item[3]
-    file = os.path.join(current_dir, file_type, subfolder, filename)
+    file = get_file_path(file_type, subfolder, filename)
     #文件名去除后缀
     filename_video_thumb = filename.split('.')[0] + ".png"
-    video_thumb = os.path.join(current_dir, file_type, subfolder, filename_video_thumb)
+    video_thumb = get_file_path(file_type, subfolder, filename_video_thumb)
     if os.path.exists(video_thumb) == False:
-        get_thumbnail(file, video_thumb)
+        if not get_thumbnail(file, video_thumb):
+            print(f"无法生成视频缩略图，跳过上传：{file}")
+            return
 
     respData = upload_file(video_thumb, url_upload_file, api_key) #先单独上传文件
     print(f"####upload v_file-img/{filename_video_thumb}:resp:{respData}:type:{type(respData)}")
@@ -443,12 +472,23 @@ def getCurrTimefff():
     formatted_time = current_time.strftime("%Y%m%d%H%M%S%fff")
     return formatted_time
 def get_thumbnail(input_video_path, output_image_path):
-    (
-        ffmpeg
-        .input(input_video_path)
-        .output(output_image_path, vframes=1)
-        .run()
-    )
+    if ffmpeg is None:
+        print("未安装 ffmpeg-python，无法生成视频缩略图。请执行: pip install ffmpeg-python")
+        return False
+    try:
+        (
+            ffmpeg
+            .input(input_video_path)
+            .output(output_image_path, vframes=1)
+            .run()
+        )
+        if os.path.exists(output_image_path):
+            return True
+        print(f"生成视频缩略图失败：未生成输出文件 {output_image_path}")
+        return False
+    except Exception as e:
+        print(f"生成视频缩略图失败: {e}")
+        return False
 
 def file_gui_dang(): 
     listData = find_list_guidang_db(50, 0)
@@ -462,7 +502,6 @@ def file_gui_dang():
 
 def file_gui_dang_by_thread():
     listData = find_list_guidang_db(50, 0)
-    current_dir = os.getcwd()
     while listData != None:
         for item in listData:
             recordId = item[0]
@@ -478,17 +517,17 @@ def file_gui_dang_by_thread():
             end_path_type = 'image'
             if filename.endswith(".mp4"):
                 end_path_type = 'video'
-            file = os.path.join(current_dir, file_type, subfolder, filename)
+            file = get_file_path(file_type, subfolder, filename)
             if os.path.exists(file):
-                move_dir_day = os.path.join(current_dir, file_type, subfolder, bak, sub_dir_day, end_path_type)
+                move_dir_day = os.path.join(get_directory_by_type(file_type), subfolder or "", bak, sub_dir_day, end_path_type)
                 os.makedirs(move_dir_day, exist_ok=True)
                 shutil.move(file, os.path.join(move_dir_day, filename))
                
             #截取filename文件名，不要后缀,生成视频时自带的缩略图
             filename_new = filename.split('.')[0]+".png"
-            fileThumb = os.path.join(current_dir, file_type, subfolder, filename_new)    
+            fileThumb = get_file_path(file_type, subfolder, filename_new)
             if os.path.exists(fileThumb):
-                move_dir_day = os.path.join(current_dir, file_type, subfolder, bak, sub_dir_day, end_path_type)
+                move_dir_day = os.path.join(get_directory_by_type(file_type), subfolder or "", bak, sub_dir_day, end_path_type)
                 os.makedirs(move_dir_day, exist_ok=True)
                 shutil.move(fileThumb, os.path.join(move_dir_day, filename_new))
             

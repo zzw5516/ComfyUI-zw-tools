@@ -290,7 +290,8 @@ export const imageBrowser = {
     },
     async initEvent() {
         imageBrowser.setImageBrowserBarLocalHeight();
-        $(".comfy-menu").css("top","10px");
+        // 旧版前端的 .comfy-menu 在新版中已不存在，不再强制调整其位置。
+        // $(".comfy-menu").css("top","10px");
 
         $(".zw-image-browser").find(".zw-btn-close").click(function () {
             $(".zw-image-browser").hide();
